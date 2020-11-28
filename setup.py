@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="nkpack-ravshansk", # Replace with your own username
+    name="nkpack", # Replace with your own username
     version="1.0.0",
     author="Ravshan S.K.",
     author_email="rsk@ravshansk.com",
