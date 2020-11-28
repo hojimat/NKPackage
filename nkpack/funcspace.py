@@ -196,7 +196,8 @@ def get_globalmax(imat,cmat,n,p,t0=1,t1=0.1,alpha=0.0001,k=1):
     
     state = np.array(binx(0,n_p))
     value = contrib_solve(state,imat,cmat,n,p)
-
+    
+    t = t0
     while t>t1:
         state_ = random_neighbour(state,0,n_p)
         value_ = contrib_solve(state_,imat,cmat,n,p)
