@@ -191,12 +191,8 @@ def contrib_full(imat,cmat,n,p):
 #    output = perfmax
 #    return output
 
-def get_globalmax(imat,cmat,n,p):
+def get_globalmax(imat,cmat,n,p,t0=1,t1=0.1,alpha=0.0001,k=1):
     n_p = n*p
-    t0 = 1
-    t1 = 0.1
-    alpha = 0.0001
-    t = t0
     
     state = np.array(binx(0,n_p))
     value = contrib_solve(state,imat,cmat,n,p)
