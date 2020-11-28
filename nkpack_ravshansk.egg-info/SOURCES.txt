@@ -1,0 +1,8 @@
+README.md
+setup.py
+nkpack/__init__.py
+nkpack/funcspace.py
+nkpack_ravshansk.egg-info/PKG-INFO
+nkpack_ravshansk.egg-info/SOURCES.txt
+nkpack_ravshansk.egg-info/dependency_links.txt
+nkpack_ravshansk.egg-info/top_level.txt
