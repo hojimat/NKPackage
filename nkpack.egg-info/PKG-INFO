@@ -1,0 +1,14 @@
+Metadata-Version: 1.2
+Name: nkpack
+Version: 1.0.0
+Summary: A library of utilities for NK modeling
+Home-page: https://github.com/ravshansk/nkpack
+Author: Ravshan S.K.
+Author-email: rsk@ravshansk.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
