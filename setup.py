@@ -5,7 +5,7 @@ setuptools.setup(
     version="1.0.0",
     author="Ravshan S.K.",
     author_email="rsk@ravshansk.com",
-    description="A small example package",
+    description="A library of utilities for NK modeling",
     url="https://github.com/ravshansk/nkpack",
     packages=setuptools.find_packages(),
     classifiers=[
