@@ -7,7 +7,7 @@ with open(path.join(mydir, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name="nkpack", # Replace with your own username
-    version="1.0.1",
+    version="1.0.3",
     author="Ravshan S.K.",
     author_email="rsk@ravshansk.com",
     description="Utilities library for agent-based modeling using NK-framework",
