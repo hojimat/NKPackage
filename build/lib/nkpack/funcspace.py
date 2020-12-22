@@ -6,6 +6,17 @@ from itertools import combinations as comb
 ###############################################################################
 
 def interaction_matrix(N,K,shape="roll"):
+    """Creates an interaction matrix for a given K
+
+    Args:
+        N (int): Number of bits
+        K (int): Level of interactions
+        shape (str): Shape of interactions. Takes values 'roll' (default), 'random', 'diag'.
+
+    Returns:
+        numpy.ndarray: an NxN numpy array with diagonal values equal to 1 and rowSums=colSums=K+1
+    """
+
     output = None
     if K == 0:
         output = np.eye(N,dtype=int)
@@ -39,6 +50,16 @@ def interaction_matrix(N,K,shape="roll"):
     return output
 
 def binary_combinations(N,R):
+    """Generates all binary vectors with sum R
+
+    Args:
+        N (int): Size of a binary vector
+        R (int): Sum of elements of a vector
+
+    Returns:
+        numpy.ndarray: an (N R)xN numpy array, where rows are vectors of size N and sum of elements R
+    """
+
     tmp = []
     idx = comb(range(N),R)
     for i in idx:
@@ -50,6 +71,17 @@ def binary_combinations(N,R):
     return(output)
     
 def random_binary_matrix(N,R,diag=None):
+    """Generates a random binary square matrix with a given row/col sum
+
+    Args:
+        N (int): Number of rows/cols
+        R (int): Sum of rows/cols
+        diag (int or None): Fixed value for diagonal. Takes values None (default), 0, 1.
+
+    Returns:
+        numpy.ndarray: an NxN numpy array
+    """
+
     if N==R:
         tmp = np.ones((N,R),dtype=int)
         return tmp
@@ -99,6 +131,18 @@ def random_binary_matrix(N,R,diag=None):
 
 ###############################################################################
 def binx(x,size=4,out=None):
+    """Converts values to binary and back
+
+    Args:
+        x: Input value (can be any type)
+        size (int): Desired output vector size (adds leading zeros if the output size is less than desired, ignores otherwise)
+        out (str or None): Specifies output type. Is ignored at the moment.
+
+    Returns:
+        list: A list of 0s and 1s if x is int.
+        int: A decimal equivalent if x is str, numpy.ndarray, list.
+    """
+
     tmp = x
     if type(tmp) is int:
         tmp = np.binary_repr(tmp,size)
@@ -115,6 +159,20 @@ def binx(x,size=4,out=None):
     return tmp
 
 def contrib_define(p,n,k,c,s,rho):
+    """Defines a contribution matrix for given parameters
+
+    Args:
+        p (int): Number of landscapes (population size)
+        n (int): Number of tasks per landscape
+        k (int): Number of internal bits interacting with each bit
+        c (int): Number of external bits interacting with each bit
+        s (int): Number of landscapes considered for external bits
+        rho (float): Correlation coefficient between landscapes
+
+    Returns:
+        numpy.ndarray: An (N*P)x2**(1+K+C*S) matrix of P contribution matrices with correlation RHO
+    """
+
     #output = np.random.uniform(0,1,(2**(1+k+c*s),n*p))
     corrmat = np.repeat(rho,p*p).reshape(p,p) + (1-rho) * np.eye(p)
     corrmat = 2*np.sin((np.pi / 6 ) * corrmat)
@@ -155,11 +213,43 @@ def xcontrib_solve(x,imat,cmat,n,p):
     return phi
 
 def contrib_solve(x,imat,cmat,n,p):
+    """Computes a performance for vector x from given contribution matrix and interaction matrix
+
+    Notes:
+        Uses Numba's njit compiler.
+
+    Args:
+        x: An input vector
+        imat (numpy.ndarray): Interaction matrix
+        cmat (numpy.ndarray): Contribution matrix
+        n (int): Number of tasks per landscape
+        p (int): Number of landscapes (population size)
+
+    Returns:
+        float: A mean performance of an input vector x given cmat and imat.
+    """
+    
     phi = xcontrib_solve(x,imat,cmat,n,p)
     phi = np.reshape(phi,(p,n)).mean(axis=1)
     return phi
 
 def contrib_full(imat,cmat,n,p):
+    """Computes performances for all binary vectors of size N*P
+
+    Notes:
+        The most processing-heavy part of any simulation. get_global_max() is a 'lazy' alternative
+
+    Args:
+        imat (numpy.ndarray): Interaction matrix
+        cmat (numpy.ndarray): Contribution matrix
+        n (int): Number of tasks per landscape
+        p (int): Number of landscapes (population size)
+
+    Returns:
+        numpy.ndarray: Array of performances for all vectors of size N*P, normalized by the global maximum
+        float: the global maximum value
+    """
+
     n_p = n*p
     perfmat = np.zeros((2**n_p,p),dtype=float)
     for i in range(2**n_p):
@@ -191,7 +281,23 @@ def contrib_full(imat,cmat,n,p):
 #    output = perfmax
 #    return output
 
-def get_globalmax(imat,cmat,n,p,t0=1,t1=0.1,alpha=0.0001,k=1):
+def get_globalmax(imat,cmat,n,p,t0=20,t1=0,alpha=0.1,kk=1):
+    """Estimates a global maximum for a landscape using Simulated Annealing algorithm
+
+    Args:
+        imat (numpy.ndarray): Interaction matrix
+        cmat (numpy.ndarray): Contribution matrix
+        n (int): Number of tasks per landscape
+        p (int): Number of landscapes (population size)
+        t0 (float): Initial temperature. Suggested values are 20 (default) or 1.
+        t1 (float): Final temperature. Suggested value is 0 (default)
+        alpha (float): Step for temperature. Suggested value are 0.1 (default) or 0.001
+        kk (float): Adjustment parameter. Not used at the moment.
+
+    Returns:
+        numpy.ndarray: The estimates of the global maximum for each of the P landscapes
+    """
+
     n_p = n*p
     
     state = np.array(binx(0,n_p))
@@ -216,6 +322,17 @@ def get_globalmax(imat,cmat,n,p,t0=1,t1=0.1,alpha=0.0001,k=1):
 ###############################################################################
 
 def assign_tasks(N,POP,shape="solo"):
+    """Assigns N tasks to POP agents
+
+    Args:
+        N (int): Number of tasks 
+        POP (int): Number of agents (population size)
+        shape (str): Type of allocation. Takes values 'solo' (default) and 'overlap' (not used at the moment)
+
+    Returns:
+        numpy.ndarray: Returns a POPxN matrix where rows represent agents and cols represent tasks
+    """
+
     output = None
     if shape=="solo":
         perCapita = N / POP
@@ -229,7 +346,21 @@ def assign_tasks(N,POP,shape="solo"):
 
 ###############################################################################
 
-def generate_network(POP,S=[2],shape="cycle",absval=False,weights=[1.0]):
+def generate_network(POP,S=[2],shape="random",absval=False,weights=[1.0]):
+    """Generates a unidirectional network topology
+
+    Args:
+        POP (int): Number of agents (population size)
+        S (list): A list of network degrees (list is used for averaging different network structures)
+        shape (str): A network topology. Takes values 'random' (default), 'cycle' (ring topology), 'star' (not used at the moment)
+        absval (bool): Indexing convention. If True, converts negative indices to positive.
+        weights (list): A list of weights for different network degrees
+
+    Returns:
+        numpy.ndarray: A POPxPOP matrix with probabilities of connecting to other agents
+        list: A list of S-sized vectors for every agent, if shape is 'cycle' (to be fixed)
+    """
+
     if type(S) is int:
         print("Error: wrap S in a list")
         return 0
@@ -257,6 +388,17 @@ def generate_network(POP,S=[2],shape="cycle",absval=False,weights=[1.0]):
     return(output)
 
 def generate_couples(POP,S=2,shape="cycle"):
+    """Generates couplings between landscapes (external interaction) 
+
+    Args:
+        POP (int): Number of landscapes (population size)
+        S (int): Number of landscapes considered for external bits
+        shape (str): A network topology. Takes values 'cycle' (default)
+
+    Returns:
+        list: A list of S-sized vectors with couples for every landscape.
+    """
+
     if S>=POP:
         print("Error: wrong network degree")
         return 0
@@ -272,6 +414,17 @@ def generate_couples(POP,S=2,shape="cycle"):
 ###############################################################################
 
 def get_neighbours(vec,count):
+    """Generates binary vectors that are 1-bit away (a unit Hamming distance)
+
+    Args:
+        vec (list or numpy.ndarray): An input vector
+        count (int): Number of neighbours to generate
+
+    Returns:
+        list: A list of 1-bit neighbours of vec
+        list: A list of decimal equivalents of the above
+    """
+
     tmpv = []
     tmpi = []
     subbset = np.random.choice(np.arange(len(vec)),count,replace=False)
@@ -283,6 +436,17 @@ def get_neighbours(vec,count):
     return(tmpv, tmpi)
 
 def random_neighbour(vec,myid,n):
+    """Generates a random binary vector that is 1-bit away (a unit Hamming distance)
+
+    Args:
+        vec (list or numpy.ndarray): An input vector
+        myid (int): An id of an agent of interest
+        n (int): Number of tasks allocated to a single agent
+
+    Returns:
+        list: A vector with one bit flipped for agent myid
+    """
+
     tmp = vec.copy()
     rnd = np.random.choice(range(myid*n,(myid+1)*n))
     tmp[rnd] = 1- tmp[rnd]
@@ -290,12 +454,33 @@ def random_neighbour(vec,myid,n):
     return output
 
 def get_index(vec,myid,n):
+    """Gets a decimal equivalent for the bitstring for agent myid
+
+    Args:
+        vec (list or numpy.ndarray): An input vector
+        myid (int): An id of an agent of interest
+        n (int): Number of tasks allocated to a single agent
+
+    Returns:
+        int: A decimal value of vec for myid
+    """
+
     tmp = vec.copy()
     tmp = binx(tmp[myid*n:(myid+1)*n])
     output = tmp
     return output
 
 def with_noise(vec,pb=0):
+    """Adds a noise to a vector
+
+    Args:
+        vec (list or numpy.ndarray): An input vector
+        pb (float): Probability of error/noise. Takes values between 0 (default) and 1.
+
+    Returns:
+        numpy.ndarray: A vector of same size as vec but with errors
+    """
+
     if vec.size==0:
         return vec
     tmp = vec
@@ -308,10 +493,29 @@ def with_noise(vec,pb=0):
 ###############################################################################
 
 def beta_mean(x,y):
+    """Calculates the mean of the Beta(x,y) distribution
+
+    Args:
+        x (float): alpha (shape) parameter
+        y (float): beta (scale) parameter
+
+    Returns:
+        float: A float that returns x/(x+y)
+    """
+    
     output = x / (x+y)
     return output
 
 def flatten(x):
+    """Converts a list of lists into a flat list
+
+    Args:
+        x (list): An input list
+
+    Returns:
+        list: A flat list
+    """
+    
     output = [_ for z in x for _ in z]
     return output
 
@@ -325,6 +529,16 @@ def flatten(x):
 #    return output
 
 def calculate_freq(x,vec):
+    """Calclates frequency of vec in x
+
+    Args:
+        x (numpy.ndarray): A 2d matrix
+        vec (numpy.ndarray): A 1d array
+
+    Returns:
+        float: Frequency of vec in x
+    """
+
     if x is None or vec.size==0 or vec[0,0]==-1:
         return 0.0
     freq = np.mean(vec,axis=0)
@@ -335,6 +549,18 @@ def calculate_freq(x,vec):
     return output
 
 def extract_soc(x,myid,n,nsoc):
+    """Extracts social bits from a bitstring
+
+    Args:
+        x (numpy.ndarray): An input vector
+        myid (int): An id of an agent of interest
+        n (int): Number of tasks allocated to a single agent
+        nsoc (int): Number of social tasks (exogeneous)
+
+    Returns:
+        numpy.ndarray: A vector of size nsoc
+    """
+
     tmp = x[(myid+1)*n-nsoc:(myid+1)*n]
     #tmp = str(tmp).replace(" ","").replace("[","").replace("]","")
     output = tmp
@@ -349,11 +575,23 @@ def extract_soc(x,myid,n,nsoc):
 ###############################################################################
 
 def pick(vec,count):
+    """Picks random elements form a vector
+
+    Args:
+        vec (numpy.ndarray): An input vector
+        count (int): Number of elements to pick
+
+    Returns:
+        numpy.ndarray: A vector of size count
+    """
+
     tmp = np.random.choice(range(vec),count,replace=False)
     output = np.sort(tmp)
     return output
 
 def artify(n,p,r):
+    """depreciated"""
+
     tmp = np.arange(n*p)
     tmp = tmp.reshape(p,n)
     fnc = lambda z: np.random.choice(z,r,replace=False)
@@ -362,6 +600,8 @@ def artify(n,p,r):
     return output
 
 def calculate_match(x,art):
+    """depreciated"""
+
     if art==[]:
         return 0.0
     tmp = [x[z[0]]==z[1] for z in art]
@@ -370,25 +610,71 @@ def calculate_match(x,art):
 
 ###############################################################################
 
-def cobb_douglas(vec1,vec2):
-    x = [z+1 for z in vec2]
-    w = vec1
+def cobb_douglas(weights,vec):
+    """A Cobb-Douglas utility function with given weights
+
+    Args:
+        weights (list): Weights
+        vec (numpy.ndarray): An input vector
+
+    Returns:
+        float: A Cobb-Douglas value
+    """
+
+    x = [z+1 for z in vec]
+    w = weights
     tmp = np.power(x,w).prod()
     output = tmp
     return output
 
 def satisfice(x,y,u):
+    """A satisficing utility
+
+    Args:
+        x (float): first value
+        y (float): second value
+        u (float): first goal
+
+    Returns:
+        float: Utility value
+    """
+
     cond = (x >= u)
     tmp = cond * (y + u) + (1-cond) * x
     output = tmp
     return output
 
 def weighted(x,y,p1,p2):
+    """A weighted sum
+
+    Args:
+        x (float): first value
+        y (float): second value
+        p1 (float): first weight
+        p2 (float): second weight
+
+    Returns:
+        float: A weighted sum
+    """
+
     tmp = p1*x + p2*y
     output = tmp
     return output
 
 def goal_prog(perf1,perf2,u,p1,p2):
+    """A goal programming
+
+    Args:
+        perf1 (float): first performance
+        perf2 (float): second performance
+        u (list): goals
+        p1 (float): first weigh
+        p2 (float): second weight
+
+    Returns:
+        float: A GP output
+    """
+
     d1 = np.max((u[0]-perf1,0))
     d2 = np.max((u[1]-perf2,0))
     tmp = p1*d1 + p2*d2
@@ -396,6 +682,8 @@ def goal_prog(perf1,perf2,u,p1,p2):
     return output
 
 def schism(perf1,perf2,social):
+    """depreciated"""
+
     tmp = None
     if social is True:
         tmp = perf2

@@ -7,7 +7,7 @@ with open(path.join(mydir, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name="nkpack", # Replace with your own username
-    version="1.0.3",
+    version="1.0.5",
     author="Ravshan S.K.",
     author_email="rsk@ravshansk.com",
     description="Utilities library for agent-based modeling using NK-framework",
@@ -20,8 +20,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=[
-        "numpy","scipy","itertools","numba"],
+#    install_requires=[
+#        "numpy","scipy","itertools","numba"],
     python_requires='>=3.6',
 )
 
