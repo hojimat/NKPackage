@@ -346,42 +346,38 @@ def assign_tasks(N,POP,shape="solo"):
 
 ###############################################################################
 
-def generate_network(POP,S=[2],shape="random",absval=False,weights=[1.0]):
+def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
     """Generates a unidirectional network topology
 
     Args:
         POP (int): Number of agents (population size)
-        S (list): A list of network degrees (list is used for averaging different network structures)
+        S (int): Network degree
+        pcom (float): Probability of communicating through the channel
         shape (str): A network topology. Takes values 'random' (default), 'cycle' (ring topology), 'star' (not used at the moment)
         absval (bool): Indexing convention. If True, converts negative indices to positive.
-        weights (list): A list of weights for different network degrees
 
     Returns:
         numpy.ndarray: A POPxPOP matrix with probabilities of connecting to other agents
         list: A list of S-sized vectors for every agent, if shape is 'cycle' (to be fixed)
     """
 
-    if type(S) is int:
-        print("Error: wrap S in a list")
-        return 0
-    elif max(S)>=POP:
+    if S>=POP:
         print("Error: wrong network degree")
+        return 0
+    if pcom>1 or pcom<0:
+        print("Error: wrong probability of communication")
         return 0
     output = None
     if S == 0:
         output = []
     elif shape=="cycle":
-        tmp = [[z-1] + [_%POP for _ in range(z+1,z+S[0])] for z in range(POP)]
+        tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
         if absval==True:
-            tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S[0])] for z in range(POP)]
+            tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
         output = tmp
     elif shape == "random":
-        tmp = []
-        for ss in S:
-            tmp.append(random_binary_matrix(POP,ss,0))
-        output = np.average(tmp,0,weights)
-        #output = np.where(tmp>0)[1]
-        #output = np.array_split(output,POP)
+        tmp = random_binary_matrix(POP,S,0)
+        output = tmp * pcom
     else:
         print(f"Unrecognized network shape '{shape}'")
 
