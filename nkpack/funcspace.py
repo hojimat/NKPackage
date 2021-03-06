@@ -149,10 +149,7 @@ def binx(x,size=4,out=None):
         tmp = [int(z) for z in tmp]
     elif type(tmp) is str:
         tmp = int(tmp,2)
-    elif type(tmp) is np.ndarray:
-        lenx = len(tmp)
-        tmp = np.sum(np.flip(tmp) * 2 ** (np.arange(len(tmp))))
-    elif type(tmp) is list:
+    elif type(tmp) is np.ndarray or type(tmp) is list:
         tmp = np.sum(np.flip(tmp) * 2 ** (np.arange(len(tmp))))
     else:
         print("incorrect input for function binx")
@@ -183,35 +180,6 @@ def contrib_define(p,n,k,c,s,rho):
     return output
 
 @njit
-def xcontrib_solve(x,imat,cmat,n,p):
-    n_p = n*p
-    phi = [0.0]*n_p
-    for i in range(n_p):
-        tmq = np.arange(n_p)#imat[:,i].copy()
-        q = int(i/n)
-        m = i % n
-        tmq = np.concatenate((tmq[q*n:(q+1)*n],tmq[0:q*n],tmq[(q+1)*n:n_p]))
-        tmq = np.concatenate((tmq[m:n],tmq[0:m],tmq[n:n_p]))
-        tmx = np.where(imat[:,i]>0)[0]
-        tmpx = []
-        for j in tmq:
-            a = False
-            for jj in tmx:
-                a = a or (j == jj)
-            tmpx.append(a)
-        tmpx = np.array(tmpx)
-        # used loops, because jit does not support list comprehensions
-        #tmpx = [z in tmx for z in tmq]
-        #tmpx = np.isin(tmq,tmx)
-        #tmpx = np.in1d(tmq,tmx)
-
-        indices = tmq[tmpx]
-
-        tmp = x[indices]
-        tmp_loc = np.sum(np.flip(tmp) * 2 ** (np.arange(len(tmp)))) #binx(tmp)
-        phi[i] = cmat[tmp_loc,i]
-    return phi
-
 def contrib_solve(x,imat,cmat,n,p):
     """Computes a performance for vector x from given contribution matrix and interaction matrix
 
@@ -229,9 +197,17 @@ def contrib_solve(x,imat,cmat,n,p):
         float: A mean performance of an input vector x given cmat and imat.
     """
     
-    phi = xcontrib_solve(x,imat,cmat,n,p)
-    phi = np.reshape(phi,(p,n)).mean(axis=1)
-    return phi
+    n_p = n*p
+    phi = np.zeros(n_p)
+    for i in range(n_p):
+        tmp = x[np.where(imat[:,i]>0)] # coupled bits
+        tmp_loc = np.sum(np.flip(tmp) * 2 ** (np.arange(len(tmp)))) # convert to integer
+        phi[i] = cmat[tmp_loc,i]
+
+    output = [0.0]*p
+    for i in range(p):
+        output[i] = phi[i*n : (i+1)*n].mean()
+    return output
 
 def contrib_full(imat,cmat,n,p):
     """Computes performances for all binary vectors of size N*P
@@ -251,7 +227,7 @@ def contrib_full(imat,cmat,n,p):
     """
 
     n_p = n*p
-    perfmat = np.zeros((2**n_p,p),dtype=float)
+    perfmat = np.empty((2**n_p,p),dtype=float)
     for i in range(2**n_p):
         bstring = np.array(binx(i,n_p))
         bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
@@ -268,18 +244,19 @@ def contrib_full(imat,cmat,n,p):
     output3 = perfmax
     return output1, output3#, output2, output3
 
-#def getglobalmax2(imat,cmat,n,p):
-#    n_p = n*p
-#    perfmax = np.zeros(p,dtype=float)
-#    perfargmax = 0
-#    for i in range(2**n_p):
-#        print(i)
-#        bstring = np.array(binx(i,n_p))
-#        bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
-#        perfmax = np.maximum(perfmax, bval)
-#
-#    output = perfmax
-#    return output
+def get_globalmax_brute(imat,cmat,n,p):
+    n_p = n*p
+    perfargmax = 0
+    bstrings = map(lambda x: np.array(binx(x,n_p)), range(2**n_p))
+
+    perfmax = [0.0]*p#np.zeros(p,dtype=float)
+    for i in bstrings:#range(2**n_p):
+        bstring = i
+        bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
+        perfmax = np.maximum(perfmax, bval)
+
+    output = np.array(perfmax)
+    return output
 
 def get_globalmax(imat,cmat,n,p,t0=20,t1=0,alpha=0.1,kk=1):
     """Estimates a global maximum for a landscape using Simulated Annealing algorithm
