@@ -232,7 +232,8 @@ def contrib_full(imat,cmat,n,p):
         bstring = np.array(binx(i,n_p))
         bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
         perfmat[i,] = bval
-    perfmax = np.max(perfmat,axis=0)
+    idxmax = np.argmax(np.mean(perfmat,1))
+    perfmax = perfmat[idxmax] 
     
     perfmean = np.mean(perfmat,axis=1)
     perfglobalmax = perfmean.max()
@@ -244,21 +245,7 @@ def contrib_full(imat,cmat,n,p):
     output3 = perfmax
     return output1, output3#, output2, output3
 
-def get_globalmax_brute(imat,cmat,n,p):
-    n_p = n*p
-    perfargmax = 0
-    bstrings = map(lambda x: np.array(binx(x,n_p)), range(2**n_p))
-
-    perfmax = [0.0]*p#np.zeros(p,dtype=float)
-    for i in bstrings:#range(2**n_p):
-        bstring = i
-        bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
-        perfmax = np.maximum(perfmax, bval)
-
-    output = np.array(perfmax)
-    return output
-
-def get_globalmax(imat,cmat,n,p,t0=20,t1=0,alpha=0.1,kk=1):
+def get_globalmax(imat,cmat,n,p,brute=True,t0=20,t1=0,alpha=0.1,kk=1):
     """Estimates a global maximum for a landscape using Simulated Annealing algorithm
 
     Args:
@@ -276,25 +263,38 @@ def get_globalmax(imat,cmat,n,p,t0=20,t1=0,alpha=0.1,kk=1):
     """
 
     n_p = n*p
-    
-    state = np.array(binx(0,n_p))
-    value = contrib_solve(state,imat,cmat,n,p)
-    
-    t = t0
-    while t>t1:
-        state_ = random_neighbour(state,0,n_p)
-        value_ = contrib_solve(state_,imat,cmat,n,p)
+    output = None
+   
+    if brute:
+        bstrings = map(lambda x: np.array(binx(x,n_p)), range(2**n_p))
+ 
+        perfmax = [0.0]*p#np.zeros(p,dtype=float)
+        for i in bstrings:#range(2**n_p):
+            bstring = i
+            bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
+            if np.mean(bval)>np.mean(perfmax):
+                perfmax = bval
+ 
+        output = np.array(perfmax)
+    else:
+        state = np.array(binx(0,n_p))
+        value = contrib_solve(state,imat,cmat,n,p)
         
-        d_sum = np.sum(value_) - np.sum(value)
-        d_sep = value_ - value
+        t = t0
+        while t>t1:
+            state_ = random_neighbour(state,0,n_p)
+            value_ = contrib_solve(state_,imat,cmat,n,p)
+            value_ = np.array(value_)
+            
+            d_mean = np.mean(value_) - np.mean(value)
+            #d_sep = value_ - value
 
-        if (d_sep > 0).any() or (np.exp(d_sep/t) > np.random.uniform()).any():
-        #if (d_sum>0) or (np.exp(d_sum/t) > np.random.uniform()):
-            state = state_
-            value = np.maximum(value_,value)
-        t -= alpha
+            if d_mean > 0 or np.exp(d_mean/t) > np.random.uniform():
+                state = state_
+                value = value_
+            t -= alpha
 
-    output = value
+        output = value
     return output
 ###############################################################################
 
