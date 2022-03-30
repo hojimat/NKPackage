@@ -348,10 +348,16 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
     if S == 0:
         output = []
     elif shape=="cycle":
-        tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
-        if absval==True:
-            tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
-        output = tmp
+        tmp = np.eye(POP)
+        tmp = np.vstack((tmp[1:,:],tmp[0,:]))
+        #tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
+        #if absval==True:
+        #    tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
+        output = tmp * pcom
+    elif shape == "line":
+        tmp = np.eye(POP)
+        tmp = np.vstack((tmp[1:,:],np.zeros(POP)))
+        output = tmp * pcom
     elif shape == "random":
         tmp = random_binary_matrix(POP,S,0)
         output = tmp * pcom
@@ -360,6 +366,12 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
         ii = np.random.choice(POP)
         tmp[ii,:] = 1
         tmp[ii,ii] = 0
+        output = tmp * pcom
+    elif shape == "ring":
+        tmp = np.eye(POP)
+        tmpA = np.vstack((tmp[1:,:],tmp[0,:]))
+        tmpB = np.vstack((tmp[-1:,:],tmp[:-1,:]))
+        tmp = tmpA + tmpB
         output = tmp * pcom
     else:
         print(f"Unrecognized network shape '{shape}'")
