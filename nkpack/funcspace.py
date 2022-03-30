@@ -355,6 +355,12 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
     elif shape == "random":
         tmp = random_binary_matrix(POP,S,0)
         output = tmp * pcom
+    elif shape == "star":
+        tmp = np.zeros((POP,POP))
+        ii = np.random.choice(POP)
+        tmp[:,ii] = 1
+        tmp[ii,ii] = 0
+        output = tmp * pcom
     else:
         print(f"Unrecognized network shape '{shape}'")
 
