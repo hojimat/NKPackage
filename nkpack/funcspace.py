@@ -686,3 +686,12 @@ def schism(perf1,perf2,social):
         tmp = perf1
     output = tmp
     return output
+
+def similarity(x,p,n,nsoc):
+    tmp = np.reshape(x, (p,n))[:,(n-nsoc):]
+    summ = 0
+    for i in tmp:
+        for j in tmp:
+            summ += hamming_distance(i,j)
+    output = summ
+    return output
