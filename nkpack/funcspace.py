@@ -480,6 +480,11 @@ def with_noise(vec,pb=0):
         tmp = random_neighbour(vec,0,nvec)
     output = tmp
     return output
+
+def hamming_distance(x,y):
+    tmp = np.sum(np.abs(np.array(x) - np.array(y)))
+    output = tmp
+    return output
 ###############################################################################
 
 def beta_mean(x,y):
