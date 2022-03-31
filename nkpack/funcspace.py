@@ -330,12 +330,11 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
         POP (int): Number of agents (population size)
         S (int): Network degree
         pcom (float): Probability of communicating through the channel
-        shape (str): A network topology. Takes values 'random' (default), 'cycle' (ring topology), 'star' (not used at the moment)
+        shape (str): Network topology. Takes values 'random' (default), 'ring', 'cycle', 'line', 'star'
         absval (bool): Indexing convention. If True, converts negative indices to positive.
 
     Returns:
         numpy.ndarray: A POPxPOP matrix with probabilities of connecting to other agents
-        list: A list of S-sized vectors for every agent, if shape is 'cycle' (to be fixed)
     """
 
     if S>=POP:

@@ -330,12 +330,11 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
         POP (int): Number of agents (population size)
         S (int): Network degree
         pcom (float): Probability of communicating through the channel
-        shape (str): A network topology. Takes values 'random' (default), 'cycle' (ring topology), 'star' (not used at the moment)
+        shape (str): Network topology. Takes values 'random' (default), 'ring', 'cycle', 'line', 'star'
         absval (bool): Indexing convention. If True, converts negative indices to positive.
 
     Returns:
         numpy.ndarray: A POPxPOP matrix with probabilities of connecting to other agents
-        list: A list of S-sized vectors for every agent, if shape is 'cycle' (to be fixed)
     """
 
     if S>=POP:
@@ -348,12 +347,30 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
     if S == 0:
         output = []
     elif shape=="cycle":
-        tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
-        if absval==True:
-            tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
-        output = tmp
+        tmp = np.eye(POP)
+        tmp = np.vstack((tmp[1:,:],tmp[0,:]))
+        #tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
+        #if absval==True:
+        #    tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
+        output = tmp * pcom
+    elif shape == "line":
+        tmp = np.eye(POP)
+        tmp = np.vstack((tmp[1:,:],np.zeros(POP)))
+        output = tmp * pcom
     elif shape == "random":
         tmp = random_binary_matrix(POP,S,0)
+        output = tmp * pcom
+    elif shape == "star":
+        tmp = np.zeros((POP,POP))
+        ii = np.random.choice(POP)
+        tmp[ii,:] = 1
+        tmp[ii,ii] = 0
+        output = tmp * pcom
+    elif shape == "ring":
+        tmp = np.eye(POP)
+        tmpA = np.vstack((tmp[1:,:],tmp[0,:]))
+        tmpB = np.vstack((tmp[-1:,:],tmp[:-1,:]))
+        tmp = tmpA + tmpB
         output = tmp * pcom
     else:
         print(f"Unrecognized network shape '{shape}'")
