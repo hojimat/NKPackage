@@ -482,6 +482,16 @@ def with_noise(vec,pb=0):
     return output
 
 def hamming_distance(x,y):
+    """Calculates the Hamming distance (count of different bits) between two bitstrings
+    
+    Args:
+        x (list): first list
+        y (list): second list
+
+    Returns:
+        int: An integer value
+
+    """
     tmp = np.sum(np.abs(np.array(x) - np.array(y)))
     output = tmp
     return output
@@ -688,10 +698,27 @@ def schism(perf1,perf2,social):
     return output
 
 def similarity(x,p,n,nsoc):
+    """Calculates the similarity measure of the bitstring
+
+    Args:
+        x (list): the bitstring of interest
+        p (int): number of agents
+        n (int): number of tasks per agent
+        nsoc (int): number of imitated tasks per agent
+
+    Returns:
+        float: The float between 0 and 1
+    """
+    if p<2:
+        print('Need at least 2 agents for similarity measure')
+        return
+
     tmp = np.reshape(x, (p,n))[:,(n-nsoc):]
     summ = 0
-    for i in tmp:
-        for j in tmp:
-            summ += hamming_distance(i,j)
-    output = summ
+    for i in range(p):
+        for j in range(i,p):
+            summ += hamming_distance(tmp[i,:],tmp[j,:])
+
+    max_summ = nsoc*(p/2)**2 if p%2==0 else nsoc*((p-1)/2)**2 + (p-1)*(nsoc/2)
+    output = 1-summ/max_summ
     return output
