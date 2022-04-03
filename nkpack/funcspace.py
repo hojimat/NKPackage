@@ -130,30 +130,40 @@ def random_binary_matrix(N,R,diag=None):
     return(output)
 
 ###############################################################################
-def binx(x,size=4,out=None):
-    """Converts values to binary and back
 
+@njit
+def dec2bin(x,sz):
+    """Converts decimal integer to binary array
+    
     Args:
-        x: Input value (can be any type)
-        size (int): Desired output vector size (adds leading zeros if the output size is less than desired, ignores otherwise)
-        out (str or None): Specifies output type. Is ignored at the moment.
+        x (int): An input decimal integer
+        sz (int): The desired minimum size of the output
 
     Returns:
-        list: A list of 0s and 1s if x is int.
-        int: A decimal equivalent if x is str, numpy.ndarray, list.
+        numpy.ndarray: A numpy array with trailing zeros of size at least sz
     """
-
     tmp = x
-    if type(tmp) is int:
-        tmp = np.binary_repr(tmp,size)
-        tmp = [int(z) for z in tmp]
-    elif type(tmp) is str:
-        tmp = int(tmp,2)
-    elif type(tmp) is np.ndarray or type(tmp) is list:
-        tmp = np.sum(np.flip(tmp) * 2 ** (np.arange(len(tmp))))
-    else:
-        print("incorrect input for function binx")
-    return tmp
+    output = []
+    while tmp > 0:
+        output.insert(0,tmp%2)
+        tmp = int(tmp/2)
+    if len(output)<sz:
+        output = [0]*(sz-len(output)) + output
+    output = np.array(output)
+    return output
+
+@njit
+def bin2dec(x):
+    """Converts binary list to integer
+    
+    Args:
+        x (list or numpy.ndarray): An input vector with binary values
+
+    Returns:
+        int: An decimal integer equivalent of the binary input
+    """
+    output = sum(x * 2**(np.arange(len(x))[::-1]))
+    return output
 
 def contrib_define(p,n,k,c,s,rho):
     """Defines a contribution matrix for given parameters
@@ -170,12 +180,11 @@ def contrib_define(p,n,k,c,s,rho):
         numpy.ndarray: An (N*P)x2**(1+K+C*S) matrix of P contribution matrices with correlation RHO
     """
 
-    #output = np.random.uniform(0,1,(2**(1+k+c*s),n*p))
     corrmat = np.repeat(rho,p*p).reshape(p,p) + (1-rho) * np.eye(p)
     corrmat = 2*np.sin((np.pi / 6 ) * corrmat)
-    tmp = np.random.multivariate_normal(mean=[0]*p,cov=corrmat,size=(n*2**(1+k+c*s)))
+    tmp = np.random.multivariate_normal(mean=[0]*p, cov=corrmat, size=(n*2**(1+k+c*s)))
     tmp = norm.cdf(tmp)
-    tmp = np.reshape(tmp.T,(n*p,(2**(1+k+c*s)))).T
+    tmp = np.reshape(tmp.T, (n*p, (2**(1+k+c*s)))).T
     output = tmp
     return output
 
@@ -209,93 +218,21 @@ def contrib_solve(x,imat,cmat,n,p):
         output[i] = phi[i*n : (i+1)*n].mean()
     return output
 
-def contrib_full(imat,cmat,n,p):
-    """Computes performances for all binary vectors of size N*P
 
-    Notes:
-        The most processing-heavy part of any simulation. get_global_max() is a 'lazy' alternative
-
-    Args:
-        imat (numpy.ndarray): Interaction matrix
-        cmat (numpy.ndarray): Contribution matrix
-        n (int): Number of tasks per landscape
-        p (int): Number of landscapes (population size)
-
-    Returns:
-        numpy.ndarray: Array of performances for all vectors of size N*P, normalized by the global maximum
-        float: the global maximum value
-    """
-
-    n_p = n*p
-    perfmat = np.empty((2**n_p,p),dtype=float)
-    for i in range(2**n_p):
-        bstring = np.array(binx(i,n_p))
-        bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
-        perfmat[i,] = bval
-    idxmax = np.argmax(np.mean(perfmat,1))
-    perfmax = perfmat[idxmax] 
-    
-    perfmean = np.mean(perfmat,axis=1)
-    perfglobalmax = perfmean.max()
-    #perfargmax = perfmean.argmax() 
-
-    output1 = perfmat / perfmax
-    #output2 = perfargmax
-    #output3 = perfglobalmax
-    output3 = perfmax
-    return output1, output3#, output2, output3
-
-def get_globalmax(imat,cmat,n,p,brute=True,t0=20,t1=0,alpha=0.1,kk=1):
-    """Estimates a global maximum for a landscape using Simulated Annealing algorithm
-
-    Args:
-        imat (numpy.ndarray): Interaction matrix
-        cmat (numpy.ndarray): Contribution matrix
-        n (int): Number of tasks per landscape
-        p (int): Number of landscapes (population size)
-        t0 (float): Initial temperature. Suggested values are 20 (default) or 1.
-        t1 (float): Final temperature. Suggested value is 0 (default)
-        alpha (float): Step for temperature. Suggested value are 0.1 (default) or 0.001
-        kk (float): Adjustment parameter. Not used at the moment.
-
-    Returns:
-        numpy.ndarray: The estimates of the global maximum for each of the P landscapes
-    """
-
+@njit
+def get_globalmax(imat,cmat,n,p):
     n_p = n*p
     output = None
    
-    if brute:
-        bstrings = map(lambda x: np.array(binx(x,n_p)), range(2**n_p))
+    perfmax = [0.0]*p#np.zeros(p,dtype=float)
+    for i in range(2**n_p):
+        bval = contrib_solve(dec2bin(i,n_p),imat,cmat,n,p)
+        if sum(bval)/len(bval) > sum(perfmax)/len(perfmax):
+            perfmax = bval
  
-        perfmax = [0.0]*p#np.zeros(p,dtype=float)
-        for i in bstrings:#range(2**n_p):
-            bstring = i
-            bval = contrib_solve(bstring,imat,cmat,n,p) # !!! processing heavy !!!
-            if np.mean(bval)>np.mean(perfmax):
-                perfmax = bval
- 
-        output = np.array(perfmax)
-    else:
-        state = np.array(binx(0,n_p))
-        value = contrib_solve(state,imat,cmat,n,p)
-        
-        t = t0
-        while t>t1:
-            state_ = random_neighbour(state,0,n_p)
-            value_ = contrib_solve(state_,imat,cmat,n,p)
-            value_ = np.array(value_)
-            
-            d_mean = np.mean(value_) - np.mean(value)
-            #d_sep = value_ - value
-
-            if d_mean > 0 or np.exp(d_mean/t) > np.random.uniform():
-                state = state_
-                value = value_
-            t -= alpha
-
-        output = value
+    output = np.array(perfmax)
     return output
+
 ###############################################################################
 
 def assign_tasks(N,POP,shape="solo"):
@@ -349,9 +286,6 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
     elif shape=="cycle":
         tmp = np.eye(POP)
         tmp = np.vstack((tmp[1:,:],tmp[0,:]))
-        #tmp = [[z-1] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
-        #if absval==True:
-        #    tmp = [[(z-1)%POP] + [_%POP for _ in range(z+1,z+S)] for z in range(POP)]
         output = tmp * pcom
     elif shape == "line":
         tmp = np.eye(POP)
@@ -403,28 +337,6 @@ def generate_couples(POP,S=2,shape="cycle"):
     return(output)
 ###############################################################################
 
-def get_neighbours(vec,count):
-    """Generates binary vectors that are 1-bit away (a unit Hamming distance)
-
-    Args:
-        vec (list or numpy.ndarray): An input vector
-        count (int): Number of neighbours to generate
-
-    Returns:
-        list: A list of 1-bit neighbours of vec
-        list: A list of decimal equivalents of the above
-    """
-
-    tmpv = []
-    tmpi = []
-    subbset = np.random.choice(np.arange(len(vec)),count,replace=False)
-    for i in subbset:
-        y = vec.copy()
-        y[i] = 1 - y[i]
-        tmpv.append(y)
-        tmpi.append(binx(y))
-    return(tmpv, tmpi)
-
 def random_neighbour(vec,myid,n):
     """Generates a random binary vector that is 1-bit away (a unit Hamming distance)
 
@@ -437,12 +349,12 @@ def random_neighbour(vec,myid,n):
         list: A vector with one bit flipped for agent myid
     """
 
-    tmp = vec.copy()
     rnd = np.random.choice(range(myid*n,(myid+1)*n))
-    tmp[rnd] = 1- tmp[rnd]
-    output = tmp
+    vec[rnd] = 1- vec[rnd]
+    output = vec
     return output
 
+@njit
 def get_index(vec,myid,n):
     """Gets a decimal equivalent for the bitstring for agent myid
 
@@ -455,9 +367,7 @@ def get_index(vec,myid,n):
         int: A decimal value of vec for myid
     """
 
-    tmp = vec.copy()
-    tmp = binx(tmp[myid*n:(myid+1)*n])
-    output = tmp
+    output = bin2dec(vec[myid*n:(myid+1)*n])
     return output
 
 def with_noise(vec,pb=0):
@@ -524,14 +434,6 @@ def flatten(x):
     output = [_ for z in x for _ in z]
     return output
 
-#def calculate_freq(x,vec):
-#    tmp = flatten(vec)
-#    if len(tmp)==0:
-#        tmp = 0
-#    else:
-#        tmp = tmp.count(x)/len(tmp)
-#    output = tmp
-#    return output
 
 def calculate_freq(x,vec):
     """Calclates frequency of vec in x
@@ -571,12 +473,6 @@ def extract_soc(x,myid,n,nsoc):
     output = tmp
     return output
 
-#def extract_pub(x,myid,n,p,npub):
-#    tmp = np.reshape(x,(p,n))
-#    tmp = tmp[:,-npub:n]
-#    output = tmp
-#    return output
-
 ###############################################################################
 
 def pick(vec,count):
@@ -592,25 +488,6 @@ def pick(vec,count):
 
     tmp = np.random.choice(range(vec),count,replace=False)
     output = np.sort(tmp)
-    return output
-
-def artify(n,p,r):
-    """depreciated"""
-
-    tmp = np.arange(n*p)
-    tmp = tmp.reshape(p,n)
-    fnc = lambda z: np.random.choice(z,r,replace=False)
-    tmp = np.apply_along_axis(fnc,1,tmp)
-    output = tmp
-    return output
-
-def calculate_match(x,art):
-    """depreciated"""
-
-    if art==[]:
-        return 0.0
-    tmp = [x[z[0]]==z[1] for z in art]
-    output = sum(tmp) / len(tmp) 
     return output
 
 ###############################################################################
@@ -684,17 +561,6 @@ def goal_prog(perf1,perf2,u,p1,p2):
     d2 = np.max((u[1]-perf2,0))
     tmp = p1*d1 + p2*d2
     output = -tmp
-    return output
-
-def schism(perf1,perf2,social):
-    """depreciated"""
-
-    tmp = None
-    if social is True:
-        tmp = perf2
-    else:
-        tmp = perf1
-    output = tmp
     return output
 
 def similarity(x,p,n,nsoc):
