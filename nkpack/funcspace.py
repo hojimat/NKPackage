@@ -157,7 +157,7 @@ def bin2dec(x):
     """Converts binary list to integer
     
     Args:
-        x (list or numpy.ndarray): An input vector with binary values
+        x (numpy.ndarray): An input vector with binary values
 
     Returns:
         int: An decimal integer equivalent of the binary input
