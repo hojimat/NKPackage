@@ -577,6 +577,9 @@ def similarity(x,p,n,nsoc):
     if p<2:
         print('Need at least 2 agents for similarity measure')
         return
+    if nsoc<1:
+        print('Please enter non-zero number of social bits')
+        return
 
     tmp = np.reshape(x, (p,n))[:,(n-nsoc):]
     summ = 0
@@ -586,4 +589,24 @@ def similarity(x,p,n,nsoc):
 
     max_summ = nsoc*(p/2)**2 if p%2==0 else nsoc*((p-1)/2)**2 + (p-1)*(nsoc/2)
     output = 1-summ/max_summ
+    return output
+
+def similarbits(x,p,n,nsoc):
+    """Calculates the similarity measure of the bitstring
+
+    Args:
+        x (list): the bitstring of interest
+        p (int): number of agents
+        n (int): number of tasks per agent
+        nsoc (int): number of imitated tasks per agent
+
+    Returns:
+        float: The float between 0 and 1
+    """
+    if nsoc>n:
+        print('Number of social bits exceeds total number of bits')
+    tmp = np.reshape(x, (p,n))
+    tmp = np.sum(np.array(tmp), axis=0)[(n-nsoc):]
+    tmp = np.max((tmp/p, 1-tmp/p), axis=0)
+    output = np.mean(tmp)
     return output
