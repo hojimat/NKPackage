@@ -296,9 +296,8 @@ def generate_network(POP,S=2,pcom=1.0,shape="random",absval=False):
         output = tmp * pcom
     elif shape == "star":
         tmp = np.zeros((POP,POP))
-        ii = np.random.choice(POP)
-        tmp[ii,:] = 1
-        tmp[ii,ii] = 0
+        tmp[0,:] = 1
+        tmp[0,0] = 0
         output = tmp * pcom
     elif shape == "ring":
         tmp = np.eye(POP)
