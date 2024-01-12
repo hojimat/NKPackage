@@ -1,16 +1,14 @@
 Metadata-Version: 2.1
 Name: nkpack
-Version: 1.5.7
+Version: 2.0.0
 Summary: Utilities library for agent-based modeling using NK-framework
-Home-page: https://github.com/ravshansk/nkpack
-Author: Ravshan S.K.
-Author-email: rsk@ravshansk.com
-License: UNKNOWN
-Platform: UNKNOWN
+Home-page: https://github.com/hojimat/nkpack
+Author: Ravshan Hojimat
+Author-email: ravshan.personal@gmail.com
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.6
+Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE
 
@@ -27,7 +25,5 @@ The package is based on the research needs at the [DECIDE lab](https://www.aau.a
 
 ### Credits
 The package is written by Ravshan S.K. Follow me on Twitter [@ravshansk](https://twitter.com/ravshansk).
-
-
 
 

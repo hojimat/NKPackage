@@ -2,7 +2,12 @@ LICENSE
 README.md
 setup.py
 nkpack/__init__.py
-nkpack/funcspace.py
+nkpack/bitstrings.py
+nkpack/exceptions.py
+nkpack/helpers.py
+nkpack/interactions.py
+nkpack/landscapes.py
+nkpack/metrics.py
 nkpack.egg-info/PKG-INFO
 nkpack.egg-info/SOURCES.txt
 nkpack.egg-info/dependency_links.txt
